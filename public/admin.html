@@ -16,7 +16,7 @@
          ========================================== -->
     <div id="login-view" class="auth-card" style="display: none;">
       <div class="auth-header">
-        <div class="heart-badge" aria-hidden="true" style="background: #FFE4E6; border: 2px solid #F472B6;">🌸</div>
+        <div class="heart-badge" aria-hidden="true">🌸</div>
         <h1 class="auth-title">Admin Login</h1>
         <p class="site-subtitle">Masuk ke kazeera.id Admin Panel</p>
       </div>
@@ -51,9 +51,9 @@
           <span style="font-size: 24px;">🌸</span>
           <h1 class="admin-title">Admin kazeera.id</h1>
         </div>
-        <div style="display: flex; gap: 10px; align-items: center;">
-          <a href="/" target="_blank" class="btn btn-secondary btn-sm">Lihat Website ↗</a>
-          <button onclick="handleLogout()" class="btn btn-danger btn-sm">Logout</button>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <a href="/" target="_blank" class="btn btn-secondary btn-sm">Website ↗</a>
+          <button type="button" onclick="handleLogout()" class="btn btn-danger btn-sm">Logout</button>
         </div>
       </header>
 
@@ -63,11 +63,11 @@
           <h2 style="font-family: var(--font-heading); font-size: 18px; color: var(--color-text);">Daftar Produk & Katalog</h2>
           <p id="stats-text" class="site-subtitle" style="font-size: 13px;">Memuat statistik...</p>
         </div>
-        <div style="display: flex; gap: 8px;">
-          <button onclick="openCategoryModal()" class="btn btn-secondary">
+        <div class="admin-toolbar-actions">
+          <button type="button" onclick="openCategoryModal()" class="btn btn-secondary">
             + Tambah Katalog
           </button>
-          <button onclick="openProductModal()" class="btn btn-primary">
+          <button type="button" onclick="openProductModal()" class="btn btn-primary">
             + Tambah Produk
           </button>
         </div>
@@ -203,6 +203,15 @@
     let deletingProductId = null;
     let categoriesList = [];
 
+    // Tap outside backdrop to close modal
+    document.addEventListener('click', (e) => {
+      if (e.target.classList.contains('modal-backdrop')) {
+        closeCategoryModal();
+        closeProductModal();
+        closeDeleteModal();
+      }
+    });
+
     function showAlert(message, type = 'success') {
       const alertEl = document.getElementById('admin-alert');
       alertEl.className = `alert alert-${type}`;
@@ -260,9 +269,9 @@
       container.innerHTML = categoriesList.map(cat => `
         <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; background: #FFF1F2; border: 1.5px solid #F472B6; border-radius: 20px; font-weight: 600; font-size: 14px; color: #9D174D;">
           <span>🌸 ${escapeHtml(cat.name)}</span>
-          <button onclick="deleteCategory('${escapeHtml(cat.id)}', '${escapeHtml(cat.name).replace(/'/g, "\\'")}')" 
+          <button type="button" onclick="deleteCategory('${escapeHtml(cat.id)}', '${escapeHtml(cat.name).replace(/'/g, "\\'")}')" 
                   title="Hapus Katalog ${escapeHtml(cat.name)}" 
-                  style="background: none; border: none; color: #E11D48; font-weight: bold; cursor: pointer; padding: 0 2px; font-size: 14px;">
+                  style="background: none; border: none; color: #E11D48; font-weight: bold; cursor: pointer; padding: 2px 6px; font-size: 16px; touch-action: manipulation;">
             ✕
           </button>
         </div>
@@ -295,7 +304,6 @@
       `).join('');
     }
 
-    // Category Map Helper
     function getCategoryName(catId) {
       const found = categoriesList.find(c => c.id === catId);
       return found ? found.name : catId;
@@ -417,19 +425,19 @@
             </div>
 
             <div class="admin-product-meta">
-              <div style="display: flex; gap: 8px;">
+              <div style="display: flex; gap: 6px; flex-wrap: wrap;">
                 <span class="badge badge-order">Katalog: ${escapeHtml(getCategoryName(product.category))}</span>
                 <span class="badge badge-order">Urutan: ${product.sort_order}</span>
               </div>
               
               <div class="action-buttons">
-                <button onclick="toggleActive('${product.id}', ${!product.is_active})" class="btn btn-secondary btn-sm">
+                <button type="button" onclick="toggleActive('${product.id}', ${!product.is_active})" class="btn btn-secondary btn-sm">
                   ${product.is_active ? 'Nonaktifkan' : 'Aktifkan'}
                 </button>
-                <button onclick="editProduct('${product.id}')" class="btn btn-secondary btn-sm">
+                <button type="button" onclick="editProduct('${product.id}')" class="btn btn-secondary btn-sm">
                   Edit
                 </button>
-                <button onclick="openDeleteModal('${product.id}', '${escapeHtml(product.title).replace(/'/g, "\\'")}')" class="btn btn-danger btn-sm">
+                <button type="button" onclick="openDeleteModal('${product.id}', '${escapeHtml(product.title).replace(/'/g, "\\'")}')" class="btn btn-danger btn-sm">
                   Hapus
                 </button>
               </div>
