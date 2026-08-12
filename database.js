@@ -4,11 +4,28 @@ const { v4: uuidv4 } = require('uuid');
 
 const DATA_DIR = path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'products.json');
+const CATEGORIES_FILE = path.join(DATA_DIR, 'categories.json');
 
 // Ensure data directory exists
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
+
+// Initial seed categories
+const DEFAULT_CATEGORIES = [
+  {
+    id: 'kawat_bulu',
+    name: 'Kawat Bulu',
+    sort_order: 1,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'fashion',
+    name: 'Fashion',
+    sort_order: 2,
+    created_at: new Date().toISOString(),
+  },
+];
 
 // Initial seed products
 const DEFAULT_PRODUCTS = [
@@ -92,9 +109,93 @@ function writeData(data) {
   }
 }
 
+// Read categories from file
+function readCategories() {
+  try {
+    if (!fs.existsSync(CATEGORIES_FILE)) {
+      writeCategories(DEFAULT_CATEGORIES);
+      return DEFAULT_CATEGORIES;
+    }
+    const raw = fs.readFileSync(CATEGORIES_FILE, 'utf8');
+    return JSON.parse(raw);
+  } catch (error) {
+    console.error('Error reading categories file:', error);
+    return DEFAULT_CATEGORIES;
+  }
+}
+
+// Write categories to file
+function writeCategories(data) {
+  try {
+    fs.writeFileSync(CATEGORIES_FILE, JSON.stringify(data, null, 2), 'utf8');
+  } catch (error) {
+    console.error('Error writing categories file:', error);
+  }
+}
+
+// Helper: Slugify category name
+function slugify(text) {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '_')
+    .replace(/[^\w\-]+/g, '')
+    .replace(/\-\-+/g, '_');
+}
+
 // Database Operations
 const db = {
-  // Get active products sorted by sort_order ASC
+  // Category Operations
+  getAllCategories: () => {
+    const categories = readCategories();
+    return categories.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+  },
+
+  createCategory: ({ name, sort_order = 0 }) => {
+    const categories = readCategories();
+    let id = slugify(name);
+
+    // If ID exists, append timestamp
+    if (categories.some((c) => c.id === id)) {
+      id = `${id}_${Date.now()}`;
+    }
+
+    const newCategory = {
+      id,
+      name: name.trim(),
+      sort_order: Number(sort_order) || 0,
+      created_at: new Date().toISOString(),
+    };
+
+    categories.push(newCategory);
+    writeCategories(categories);
+    return newCategory;
+  },
+
+  updateCategory: (id, { name, sort_order }) => {
+    const categories = readCategories();
+    const index = categories.findIndex((c) => c.id === id);
+    if (index === -1) return null;
+
+    if (name !== undefined) categories[index].name = name.trim();
+    if (sort_order !== undefined) categories[index].sort_order = Number(sort_order);
+
+    writeCategories(categories);
+    return categories[index];
+  },
+
+  deleteCategory: (id) => {
+    let categories = readCategories();
+    const index = categories.findIndex((c) => c.id === id);
+    if (index === -1) return false;
+
+    categories = categories.filter((c) => c.id !== id);
+    writeCategories(categories);
+    return true;
+  },
+
+  // Product Operations
   getActiveProducts: () => {
     const products = readData();
     return products
@@ -107,7 +208,6 @@ const db = {
       });
   },
 
-  // Get all products (Admin view)
   getAllProducts: () => {
     const products = readData();
     return products.sort((a, b) => {
@@ -118,13 +218,11 @@ const db = {
     });
   },
 
-  // Get single product by ID
   getProductById: (id) => {
     const products = readData();
     return products.find((p) => p.id === id) || null;
   },
 
-  // Create product
   createProduct: ({ title, affiliate_url, category = 'kawat_bulu', sort_order = 0, is_active = true }) => {
     const products = readData();
     const newProduct = {
@@ -142,7 +240,6 @@ const db = {
     return newProduct;
   },
 
-  // Update product
   updateProduct: (id, { title, affiliate_url, category, sort_order, is_active }) => {
     const products = readData();
     const index = products.findIndex((p) => p.id === id);
@@ -159,7 +256,6 @@ const db = {
     return products[index];
   },
 
-  // Delete product
   deleteProduct: (id) => {
     let products = readData();
     const index = products.findIndex((p) => p.id === id);

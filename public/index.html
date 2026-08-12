@@ -4,12 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rekomendasi kazeera.id</title>
-  <meta name="description" content="Daftar rekomendasi produk kazeera.id — Kawat Bulu & Fashion pilihan terbaik di Shopee.">
+  <meta name="description" content="Daftar rekomendasi produk kazeera.id — Pilihan terbaik di Shopee.">
   <meta name="keywords" content="Rekomendasi kazeera.id, Kawat Bulu, Fashion, Shopee Affiliate">
   
   <!-- Open Graph -->
   <meta property="og:title" content="Rekomendasi kazeera.id">
-  <meta property="og:description" content="Daftar rekomendasi produk kazeera.id — Kawat Bulu & Fashion pilihan terbaik di Shopee.">
+  <meta property="og:description" content="Daftar rekomendasi produk kazeera.id — Pilihan terbaik di Shopee.">
   <meta property="og:type" content="website">
 
   <!-- Favicon / Icon -->
@@ -31,11 +31,9 @@
 
     <!-- Main Content: Catalog Category Filter & Product List -->
     <main>
-      <!-- Category Tabs -->
-      <nav class="category-tabs" aria-label="Katalog Kategori">
+      <!-- Dynamic Category Tabs -->
+      <nav id="category-tabs" class="category-tabs" aria-label="Katalog Kategori">
         <button onclick="filterCategory('all')" class="category-tab active" id="tab-all">Semua</button>
-        <button onclick="filterCategory('kawat_bulu')" class="category-tab" id="tab-kawat_bulu">Kawat Bulu</button>
-        <button onclick="filterCategory('fashion')" class="category-tab" id="tab-fashion">Fashion</button>
       </nav>
 
       <!-- Product List Container -->
@@ -66,7 +64,37 @@
     document.getElementById('year').textContent = new Date().getFullYear();
 
     let allProducts = [];
+    let categoriesList = [];
     let activeCategory = 'all';
+
+    async function fetchCategories() {
+      try {
+        const res = await fetch('/api/categories');
+        if (res.ok) {
+          categoriesList = await res.json();
+          renderCategoryTabs();
+        }
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+      }
+    }
+
+    function renderCategoryTabs() {
+      const container = document.getElementById('category-tabs');
+      let html = `<button onclick="filterCategory('all')" class="category-tab ${activeCategory === 'all' ? 'active' : ''}" id="tab-all">Semua</button>`;
+
+      categoriesList.forEach(cat => {
+        html += `
+          <button onclick="filterCategory('${escapeHtml(cat.id)}')" 
+                  class="category-tab ${activeCategory === cat.id ? 'active' : ''}" 
+                  id="tab-${escapeHtml(cat.id)}">
+            ${escapeHtml(cat.name)}
+          </button>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
 
     async function fetchProducts() {
       const container = document.getElementById('product-list');
@@ -90,12 +118,7 @@
 
     function filterCategory(cat) {
       activeCategory = cat;
-
-      // Update active tab styles
-      document.querySelectorAll('.category-tab').forEach(tab => tab.classList.remove('active'));
-      const activeTab = document.getElementById(`tab-${cat}`);
-      if (activeTab) activeTab.classList.add('active');
-
+      renderCategoryTabs();
       renderProducts();
     }
 
@@ -138,7 +161,8 @@
         .replace(/'/g, "&#039;");
     }
 
-    // Load products on start
+    // Load categories & products on start
+    fetchCategories();
     fetchProducts();
   </script>
 

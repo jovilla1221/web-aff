@@ -53,6 +53,17 @@ function isValidUrl(string) {
 // PUBLIC API ROUTES
 // ==========================================
 
+// GET /api/categories — Fetch all categories for public tabs
+app.get('/api/categories', (req, res) => {
+  try {
+    const categories = db.getAllCategories();
+    return res.json(categories);
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    return res.status(500).json({ error: 'Gagal mengambil data kategori' });
+  }
+});
+
 // GET /api/products — Fetch active products for homepage
 app.get('/api/products', (req, res) => {
   try {
@@ -108,6 +119,80 @@ app.get('/api/admin/check-auth', (req, res) => {
     return res.json({ authenticated: true, username: req.session.username });
   }
   return res.json({ authenticated: false });
+});
+
+// ==========================================
+// ADMIN CATEGORY (KATALOG) CRUD API ROUTES
+// ==========================================
+
+// GET /api/admin/categories — List all categories
+app.get('/api/admin/categories', requireAuth, (req, res) => {
+  try {
+    const categories = db.getAllCategories();
+    return res.json(categories);
+  } catch (error) {
+    console.error('Error fetching admin categories:', error);
+    return res.status(500).json({ error: 'Gagal mengambil daftar kategori' });
+  }
+});
+
+// POST /api/admin/categories — Create category
+app.post('/api/admin/categories', requireAuth, (req, res) => {
+  const { name, sort_order } = req.body;
+
+  if (!name || typeof name !== 'string' || name.trim().length === 0) {
+    return res.status(400).json({ error: 'Nama katalog/kategori wajib diisi' });
+  }
+
+  try {
+    const newCategory = db.createCategory({
+      name,
+      sort_order: sort_order !== undefined ? parseInt(sort_order, 10) : 0,
+    });
+
+    return res.status(201).json(newCategory);
+  } catch (error) {
+    console.error('Error creating category:', error);
+    return res.status(500).json({ error: 'Gagal menyimpan kategori baru' });
+  }
+});
+
+// PUT /api/admin/categories/:id — Update category
+app.put('/api/admin/categories/:id', requireAuth, (req, res) => {
+  const { id } = req.params;
+  const { name, sort_order } = req.body;
+
+  try {
+    const updated = db.updateCategory(id, {
+      name,
+      sort_order: sort_order !== undefined ? parseInt(sort_order, 10) : undefined,
+    });
+
+    if (!updated) {
+      return res.status(404).json({ error: 'Kategori tidak ditemukan' });
+    }
+
+    return res.json(updated);
+  } catch (error) {
+    console.error('Error updating category:', error);
+    return res.status(500).json({ error: 'Gagal mengedit kategori' });
+  }
+});
+
+// DELETE /api/admin/categories/:id — Delete category
+app.delete('/api/admin/categories/:id', requireAuth, (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const success = db.deleteCategory(id);
+    if (success) {
+      return res.json({ success: true, message: 'Kategori berhasil dihapus' });
+    }
+    return res.status(500).json({ error: 'Gagal menghapus kategori' });
+  } catch (error) {
+    console.error('Error deleting category:', error);
+    return res.status(500).json({ error: 'Gagal menghapus kategori' });
+  }
 });
 
 // ==========================================

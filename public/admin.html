@@ -60,12 +60,17 @@
       <!-- Toolbar & Stats -->
       <div class="admin-toolbar">
         <div>
-          <h2 style="font-family: var(--font-heading); font-size: 18px; color: var(--color-text);">Daftar Produk Affiliate</h2>
+          <h2 style="font-family: var(--font-heading); font-size: 18px; color: var(--color-text);">Daftar Produk & Katalog</h2>
           <p id="stats-text" class="site-subtitle" style="font-size: 13px;">Memuat statistik...</p>
         </div>
-        <button onclick="openProductModal()" class="btn btn-primary">
-          + Tambah Produk
-        </button>
+        <div style="display: flex; gap: 8px;">
+          <button onclick="openCategoryModal()" class="btn btn-secondary">
+            + Tambah Katalog
+          </button>
+          <button onclick="openProductModal()" class="btn btn-primary">
+            + Tambah Produk
+          </button>
+        </div>
       </div>
 
       <div id="admin-alert" class="alert" style="display: none;"></div>
@@ -83,7 +88,37 @@
   </div>
 
   <!-- ==========================================
-       PRODUCT FORM MODAL (Add / Edit)
+       CATEGORY FORM MODAL (Add Catalog)
+       ========================================== -->
+  <div id="category-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <h2 id="modal-category-title" class="modal-title">Tambah Katalog Baru</h2>
+      
+      <div id="modal-category-alert" class="alert alert-danger" style="display: none;"></div>
+
+      <form id="category-form">
+        <input type="hidden" id="form-category-id">
+
+        <div class="form-group">
+          <label class="form-label" for="form-category-name">Nama Katalog *</label>
+          <input type="text" id="form-category-name" class="form-input" placeholder="Contoh: Skincare, Hijab, Aksesoris" maxlength="100" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="form-category-sort">Urutan Tampilan</label>
+          <input type="number" id="form-category-sort" class="form-input" value="0" min="0">
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" onclick="closeCategoryModal()" class="btn btn-secondary">Batal</button>
+          <button type="submit" class="btn btn-primary">Simpan Katalog 🌸</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       PRODUCT FORM MODAL (Add / Edit Product)
        ========================================== -->
   <div id="product-modal" class="modal-backdrop">
     <div class="modal-card">
@@ -107,8 +142,7 @@
         <div class="form-group">
           <label class="form-label" for="form-category">Katalog Kategori *</label>
           <select id="form-category" class="form-select" required>
-            <option value="kawat_bulu">Kawat Bulu</option>
-            <option value="fashion">Fashion</option>
+            <!-- Dynamically populated -->
           </select>
         </div>
 
@@ -154,6 +188,7 @@
   <!-- Vanilla JS Script -->
   <script>
     let deletingProductId = null;
+    let categoriesList = [];
 
     // Check Auth Status on Load
     async function checkAuth() {
@@ -164,6 +199,7 @@
         if (data.authenticated) {
           document.getElementById('login-view').style.display = 'none';
           document.getElementById('dashboard-view').style.display = 'block';
+          await loadAdminCategories();
           loadAdminProducts();
         } else {
           document.getElementById('login-view').style.display = 'block';
@@ -173,6 +209,34 @@
         console.error('Check auth error:', err);
         document.getElementById('login-view').style.display = 'block';
       }
+    }
+
+    // Load Admin Categories
+    async function loadAdminCategories() {
+      try {
+        const res = await fetch('/api/admin/categories');
+        if (res.ok) {
+          categoriesList = await res.json();
+          populateCategorySelect();
+        }
+      } catch (err) {
+        console.error('Error loading categories:', err);
+      }
+    }
+
+    function populateCategorySelect() {
+      const select = document.getElementById('form-category');
+      if (!select) return;
+
+      select.innerHTML = categoriesList.map(cat => `
+        <option value="${escapeHtml(cat.id)}">${escapeHtml(cat.name)}</option>
+      `).join('');
+    }
+
+    // Category Map Helper
+    function getCategoryName(catId) {
+      const found = categoriesList.find(c => c.id === catId);
+      return found ? found.name : catId;
     }
 
     // Handle Login Submit
@@ -210,11 +274,47 @@
       checkAuth();
     }
 
-    // Format Category Name
-    function formatCategory(cat) {
-      if (cat === 'fashion') return 'Fashion';
-      return 'Kawat Bulu';
+    // Modal Operations (Add / Edit Catalog Category)
+    function openCategoryModal() {
+      document.getElementById('modal-category-alert').style.display = 'none';
+      document.getElementById('category-form').reset();
+      document.getElementById('form-category-id').value = '';
+      document.getElementById('category-modal').classList.add('active');
     }
+
+    function closeCategoryModal() {
+      document.getElementById('category-modal').classList.remove('active');
+    }
+
+    document.getElementById('category-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const alertEl = document.getElementById('modal-category-alert');
+      alertEl.style.display = 'none';
+
+      const name = document.getElementById('form-category-name').value.trim();
+      const sort_order = parseInt(document.getElementById('form-category-sort').value, 10) || 0;
+
+      try {
+        const res = await fetch('/api/admin/categories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, sort_order })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          closeCategoryModal();
+          await loadAdminCategories();
+          loadAdminProducts();
+        } else {
+          alertEl.textContent = data.error || 'Gagal menyimpan katalog';
+          alertEl.style.display = 'block';
+        }
+      } catch (err) {
+        alertEl.textContent = 'Terjadi kesalahan server';
+        alertEl.style.display = 'block';
+      }
+    });
 
     // Load Admin Products
     async function loadAdminProducts() {
@@ -230,7 +330,7 @@
         const products = await res.json();
 
         const activeCount = products.filter(p => p.is_active).length;
-        statsEl.textContent = `${products.length} Total produk • ${activeCount} Aktif • ${products.length - activeCount} Nonaktif`;
+        statsEl.textContent = `${products.length} Total produk • ${categoriesList.length} Katalog • ${activeCount} Aktif`;
 
         if (products.length === 0) {
           container.innerHTML = `
@@ -255,7 +355,7 @@
 
             <div class="admin-product-meta">
               <div style="display: flex; gap: 8px;">
-                <span class="badge badge-order">Katalog: ${formatCategory(product.category)}</span>
+                <span class="badge badge-order">Katalog: ${escapeHtml(getCategoryName(product.category))}</span>
                 <span class="badge badge-order">Urutan: ${product.sort_order}</span>
               </div>
               
@@ -294,10 +394,11 @@
       }
     }
 
-    // Modal Operations (Add / Edit)
+    // Modal Operations (Add / Edit Product)
     function openProductModal(product = null) {
       const modalAlert = document.getElementById('modal-alert');
       modalAlert.style.display = 'none';
+      populateCategorySelect();
 
       if (product) {
         document.getElementById('modal-form-title').textContent = 'Edit Produk';
@@ -311,7 +412,6 @@
         document.getElementById('modal-form-title').textContent = 'Tambah Produk Baru';
         document.getElementById('form-product-id').value = '';
         document.getElementById('product-form').reset();
-        document.getElementById('form-category').value = 'kawat_bulu';
         document.getElementById('form-sort').value = 0;
         document.getElementById('form-active').checked = true;
       }
