@@ -203,6 +203,14 @@
     let deletingProductId = null;
     let categoriesList = [];
 
+    /**
+     * Global fetch wrapper: Always sends credentials (cookies) so session
+     * survives HTTPS proxy tunnels (Cloudflare, localtunnel, etc.) on mobile.
+     */
+    function fetchApi(url, options = {}) {
+      return fetch(url, { credentials: 'include', ...options });
+    }
+
     // Tap outside backdrop to close modal
     document.addEventListener('click', (e) => {
       if (e.target.classList.contains('modal-backdrop')) {
@@ -225,7 +233,7 @@
     // Check Auth Status on Load
     async function checkAuth() {
       try {
-        const res = await fetch('/api/admin/check-auth');
+        const res = await fetchApi('/api/admin/check-auth');
         const data = await res.json();
 
         if (data.authenticated) {
@@ -246,7 +254,7 @@
     // Load Admin Categories using public endpoint
     async function loadAdminCategories() {
       try {
-        const res = await fetch('/api/categories');
+        const res = await fetchApi('/api/categories');
         if (res.ok) {
           categoriesList = await res.json();
           populateCategorySelect();
@@ -282,7 +290,7 @@
       if (!confirm(`Apakah Anda yakin ingin menghapus katalog "${name}"?`)) return;
 
       try {
-        const res = await fetch(`/api/admin/categories/${id}`, { method: 'DELETE' });
+        const res = await fetchApi(`/api/admin/categories/${id}`, { method: 'DELETE' });
         const data = await res.json();
         if (res.ok && data.categories) {
           categoriesList = data.categories;
@@ -324,7 +332,7 @@
       const password = document.getElementById('password').value.trim();
 
       try {
-        const res = await fetch('/api/admin/login', {
+        const res = await fetchApi('/api/admin/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password })
@@ -345,7 +353,7 @@
 
     // Handle Logout
     async function handleLogout() {
-      await fetch('/api/admin/logout', { method: 'POST' });
+      await fetchApi('/api/admin/logout', { method: 'POST' });
       checkAuth();
     }
 
@@ -378,7 +386,7 @@
       }
 
       try {
-        const res = await fetch('/api/admin/categories', {
+        const res = await fetchApi('/api/admin/categories', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, sort_order })
@@ -410,7 +418,7 @@
       const statsEl = document.getElementById('stats-text');
 
       try {
-        const res = await fetch('/api/admin/products');
+        const res = await fetchApi('/api/admin/products');
         if (res.status === 401) {
           checkAuth();
           return;
@@ -471,7 +479,7 @@
     // Toggle Active Status
     async function toggleActive(id, newStatus) {
       try {
-        await fetch(`/api/admin/products/${id}`, {
+        await fetchApi(`/api/admin/products/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ is_active: newStatus })
@@ -514,7 +522,7 @@
     // Edit Product Click Handler
     async function editProduct(id) {
       try {
-        const res = await fetch('/api/admin/products');
+        const res = await fetchApi('/api/admin/products');
         const products = await res.json();
         const p = products.find(item => item.id === id);
         if (p) openProductModal(p);
@@ -541,7 +549,7 @@
       const method = id ? 'PUT' : 'POST';
 
       try {
-        const res = await fetch(url, {
+        const res = await fetchApi(url, {
           method,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -580,7 +588,7 @@
       if (!deletingProductId) return;
 
       try {
-        const res = await fetch(`/api/admin/products/${deletingProductId}`, {
+        const res = await fetchApi(`/api/admin/products/${deletingProductId}`, {
           method: 'DELETE'
         });
         if (res.ok) {

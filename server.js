@@ -6,6 +6,9 @@ const db = require('./database');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust proxy (Cloudflare tunnel, localtunnel, etc.) so cookies work over HTTPS
+app.set('trust proxy', 1);
+
 // Admin Default Credentials
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
@@ -23,7 +26,8 @@ app.use(
     cookie: {
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       httpOnly: true,
-      secure: false, // Set true in production HTTPS
+      secure: true,     // Required for SameSite=None over HTTPS tunnels
+      sameSite: 'none',  // Allow cookie to be sent cross-site (tunnel proxy)
     },
   })
 );
