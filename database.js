@@ -10,7 +10,7 @@ if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-// Initial seed products: Kawat Bulu & Fashion
+// Initial seed products
 const DEFAULT_PRODUCTS = [
   {
     id: 'kb-001',
@@ -62,56 +62,6 @@ const DEFAULT_PRODUCTS = [
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   },
-  {
-    id: 'fs-001',
-    title: 'Cardigan Rajut Oversize Korean Style Soft Pink',
-    affiliate_url: 'https://s.shopee.co.id/5Re6E8tW5X',
-    category: 'fashion',
-    sort_order: 1,
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'fs-002',
-    title: 'Tote Bag Canvas Minimalis Aesthetic',
-    affiliate_url: 'https://s.shopee.co.id/6Sf7F9uX6Y',
-    category: 'fashion',
-    sort_order: 2,
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'fs-003',
-    title: 'Hijab Bella Square Premium Soft Tone',
-    affiliate_url: 'https://s.shopee.co.id/7Tg8G0vY7Z',
-    category: 'fashion',
-    sort_order: 3,
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'fs-004',
-    title: 'Rok Plisket Premium Silk Glossy Flare',
-    affiliate_url: 'https://s.shopee.co.id/8Uh9H1wZ8A',
-    category: 'fashion',
-    sort_order: 4,
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'fs-005',
-    title: 'Blouse Cut Out Korean Collar Pastel',
-    affiliate_url: 'https://s.shopee.co.id/9Vi0I2xa9B',
-    category: 'fashion',
-    sort_order: 5,
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
 ];
 
 // Read products from file
@@ -123,7 +73,6 @@ function readData() {
     }
     const raw = fs.readFileSync(DATA_FILE, 'utf8');
     const items = JSON.parse(raw);
-    // Ensure all items have category property
     return items.map((item) => ({
       ...item,
       category: item.category || 'kawat_bulu',

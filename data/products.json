@@ -7,7 +7,7 @@
     "sort_order": 1,
     "is_active": true,
     "created_at": "2026-08-12T15:56:00.000Z",
-    "updated_at": "2026-08-12T16:57:00.000Z"
+    "updated_at": "2026-08-12T17:01:00.000Z"
   },
   {
     "id": "kb-002",
@@ -17,7 +17,7 @@
     "sort_order": 2,
     "is_active": true,
     "created_at": "2026-08-12T15:56:00.000Z",
-    "updated_at": "2026-08-12T16:57:00.000Z"
+    "updated_at": "2026-08-12T17:01:00.000Z"
   },
   {
     "id": "kb-003",
@@ -27,7 +27,7 @@
     "sort_order": 3,
     "is_active": true,
     "created_at": "2026-08-12T15:56:00.000Z",
-    "updated_at": "2026-08-12T16:57:00.000Z"
+    "updated_at": "2026-08-12T17:01:00.000Z"
   },
   {
     "id": "kb-004",
@@ -37,7 +37,7 @@
     "sort_order": 4,
     "is_active": true,
     "created_at": "2026-08-12T15:56:00.000Z",
-    "updated_at": "2026-08-12T16:57:00.000Z"
+    "updated_at": "2026-08-12T17:01:00.000Z"
   },
   {
     "id": "kb-005",
@@ -47,56 +47,56 @@
     "sort_order": 5,
     "is_active": true,
     "created_at": "2026-08-12T15:56:00.000Z",
-    "updated_at": "2026-08-12T16:57:00.000Z"
+    "updated_at": "2026-08-12T17:01:00.000Z"
   },
   {
     "id": "fs-001",
     "title": "Cardigan Rajut Oversize Korean Style Soft Pink",
     "affiliate_url": "https://s.shopee.co.id/5Re6E8tW5X",
-    "category": "fashion",
-    "sort_order": 1,
+    "category": "kawat_bulu",
+    "sort_order": 6,
     "is_active": true,
     "created_at": "2026-08-12T16:57:00.000Z",
-    "updated_at": "2026-08-12T16:57:00.000Z"
+    "updated_at": "2026-08-12T17:01:00.000Z"
   },
   {
     "id": "fs-002",
     "title": "Tote Bag Canvas Minimalis Aesthetic",
     "affiliate_url": "https://s.shopee.co.id/6Sf7F9uX6Y",
-    "category": "fashion",
-    "sort_order": 2,
+    "category": "kawat_bulu",
+    "sort_order": 7,
     "is_active": true,
     "created_at": "2026-08-12T16:57:00.000Z",
-    "updated_at": "2026-08-12T16:57:00.000Z"
+    "updated_at": "2026-08-12T17:01:00.000Z"
   },
   {
     "id": "fs-003",
     "title": "Hijab Bella Square Premium Soft Tone",
     "affiliate_url": "https://s.shopee.co.id/7Tg8G0vY7Z",
-    "category": "fashion",
-    "sort_order": 3,
+    "category": "kawat_bulu",
+    "sort_order": 8,
     "is_active": true,
     "created_at": "2026-08-12T16:57:00.000Z",
-    "updated_at": "2026-08-12T16:57:00.000Z"
+    "updated_at": "2026-08-12T17:01:00.000Z"
   },
   {
     "id": "fs-004",
     "title": "Rok Plisket Premium Silk Glossy Flare",
     "affiliate_url": "https://s.shopee.co.id/8Uh9H1wZ8A",
-    "category": "fashion",
-    "sort_order": 4,
+    "category": "kawat_bulu",
+    "sort_order": 9,
     "is_active": true,
     "created_at": "2026-08-12T16:57:00.000Z",
-    "updated_at": "2026-08-12T16:57:00.000Z"
+    "updated_at": "2026-08-12T17:01:00.000Z"
   },
   {
     "id": "fs-005",
     "title": "Blouse Cut Out Korean Collar Pastel",
     "affiliate_url": "https://s.shopee.co.id/9Vi0I2xa9B",
-    "category": "fashion",
-    "sort_order": 5,
+    "category": "kawat_bulu",
+    "sort_order": 10,
     "is_active": true,
     "created_at": "2026-08-12T16:57:00.000Z",
-    "updated_at": "2026-08-12T16:57:00.000Z"
+    "updated_at": "2026-08-12T17:01:00.000Z"
   }
 ]
