@@ -73,7 +73,20 @@
         </div>
       </div>
 
-      <div id="admin-alert" class="alert" style="display: none;"></div>
+      <div id="admin-alert" class="alert alert-success" style="display: none; margin-bottom: 16px;"></div>
+
+      <!-- Catalog Categories List Section -->
+      <div class="admin-catalog-section" style="background: rgba(255, 255, 255, 0.9); border: 2px solid #FBCFE8; border-radius: 16px; padding: 16px 20px; margin-bottom: 24px; box-shadow: 0 4px 14px rgba(236, 72, 153, 0.06);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+          <h3 style="font-family: var(--font-heading); font-size: 16px; color: var(--color-pink-dark); margin: 0;">
+            📂 Katalog Kategori Aktif
+          </h3>
+          <span style="font-size: 12px; color: var(--color-text-muted);">Klik (✕) untuk menghapus katalog</span>
+        </div>
+        <div id="admin-categories-badges" style="display: flex; flex-wrap: wrap; gap: 10px;">
+          <!-- Dynamically populated category chips -->
+        </div>
+      </div>
 
       <!-- Products List Container -->
       <div id="admin-products-list">
@@ -190,6 +203,16 @@
     let deletingProductId = null;
     let categoriesList = [];
 
+    function showAlert(message, type = 'success') {
+      const alertEl = document.getElementById('admin-alert');
+      alertEl.className = `alert alert-${type}`;
+      alertEl.textContent = message;
+      alertEl.style.display = 'block';
+      setTimeout(() => {
+        alertEl.style.display = 'none';
+      }, 4000);
+    }
+
     // Check Auth Status on Load
     async function checkAuth() {
       try {
@@ -218,9 +241,48 @@
         if (res.ok) {
           categoriesList = await res.json();
           populateCategorySelect();
+          renderCategoryBadges();
         }
       } catch (err) {
         console.error('Error loading categories:', err);
+      }
+    }
+
+    function renderCategoryBadges() {
+      const container = document.getElementById('admin-categories-badges');
+      if (!container) return;
+
+      if (!categoriesList || categoriesList.length === 0) {
+        container.innerHTML = `<span style="font-size: 13px; color: var(--color-text-muted);">Belum ada katalog.</span>`;
+        return;
+      }
+
+      container.innerHTML = categoriesList.map(cat => `
+        <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; background: #FFF1F2; border: 1.5px solid #F472B6; border-radius: 20px; font-weight: 600; font-size: 14px; color: #9D174D;">
+          <span>🌸 ${escapeHtml(cat.name)}</span>
+          <button onclick="deleteCategory('${escapeHtml(cat.id)}', '${escapeHtml(cat.name).replace(/'/g, "\\'")}')" 
+                  title="Hapus Katalog ${escapeHtml(cat.name)}" 
+                  style="background: none; border: none; color: #E11D48; font-weight: bold; cursor: pointer; padding: 0 2px; font-size: 14px;">
+            ✕
+          </button>
+        </div>
+      `).join('');
+    }
+
+    async function deleteCategory(id, name) {
+      if (!confirm(`Apakah Anda yakin ingin menghapus katalog "${name}"?`)) return;
+
+      try {
+        const res = await fetch(`/api/admin/categories/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          showAlert(`Katalog "${name}" berhasil dihapus`, 'success');
+          await loadAdminCategories();
+          loadAdminProducts();
+        } else {
+          alert('Gagal menghapus katalog');
+        }
+      } catch (err) {
+        alert('Terjadi kesalahan server saat menghapus katalog');
       }
     }
 
@@ -304,6 +366,7 @@
 
         if (res.ok) {
           closeCategoryModal();
+          showAlert(`Katalog baru "${name}" berhasil ditambahkan! 🌸`, 'success');
           await loadAdminCategories();
           loadAdminProducts();
         } else {
@@ -462,6 +525,7 @@
 
         if (res.ok) {
           closeProductModal();
+          showAlert('Produk berhasil disimpan! 🌸', 'success');
           loadAdminProducts();
         } else {
           modalAlert.textContent = data.error || 'Gagal menyimpan produk';
@@ -494,6 +558,7 @@
         });
         if (res.ok) {
           closeDeleteModal();
+          showAlert('Produk berhasil dihapus', 'success');
           loadAdminProducts();
         } else {
           alert('Gagal menghapus produk');
