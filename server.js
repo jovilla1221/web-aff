@@ -61,6 +61,7 @@ app.get('/api/products', (req, res) => {
       id: p.id,
       title: p.title,
       affiliate_url: p.affiliate_url,
+      category: p.category || 'kawat_bulu',
     }));
     return res.json(publicProducts);
   } catch (error) {
@@ -126,7 +127,7 @@ app.get('/api/admin/products', requireAuth, (req, res) => {
 
 // POST /api/admin/products — Create new product
 app.post('/api/admin/products', requireAuth, (req, res) => {
-  const { title, affiliate_url, sort_order, is_active } = req.body;
+  const { title, affiliate_url, category, sort_order, is_active } = req.body;
 
   // Validation
   if (!title || typeof title !== 'string' || title.trim().length === 0) {
@@ -145,6 +146,7 @@ app.post('/api/admin/products', requireAuth, (req, res) => {
     const newProduct = db.createProduct({
       title,
       affiliate_url,
+      category: category || 'kawat_bulu',
       sort_order: sort_order !== undefined ? parseInt(sort_order, 10) : 0,
       is_active: is_active !== undefined ? Boolean(is_active) : true,
     });
@@ -159,7 +161,7 @@ app.post('/api/admin/products', requireAuth, (req, res) => {
 // PUT /api/admin/products/:id — Update existing product
 app.put('/api/admin/products/:id', requireAuth, (req, res) => {
   const { id } = req.params;
-  const { title, affiliate_url, sort_order, is_active } = req.body;
+  const { title, affiliate_url, category, sort_order, is_active } = req.body;
 
   const existing = db.getProductById(id);
   if (!existing) {
@@ -185,6 +187,7 @@ app.put('/api/admin/products/:id', requireAuth, (req, res) => {
     const updated = db.updateProduct(id, {
       title,
       affiliate_url,
+      category,
       sort_order: sort_order !== undefined ? parseInt(sort_order, 10) : undefined,
       is_active: is_active !== undefined ? Boolean(is_active) : undefined,
     });

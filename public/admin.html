@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Dashboard — Kawat Bulu Picks 🌻</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌻</text></svg>">
+  <title>Admin Dashboard — Rekomendasi kazeera.id 🌸</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌸</text></svg>">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -16,9 +16,9 @@
          ========================================== -->
     <div id="login-view" class="auth-card" style="display: none;">
       <div class="auth-header">
-        <div class="heart-badge" aria-hidden="true" style="background: #FEF9C3; border: 2px solid #FDE047;">🌻</div>
+        <div class="heart-badge" aria-hidden="true" style="background: #FFE4E6; border: 2px solid #F472B6;">🌸</div>
         <h1 class="auth-title">Admin Login</h1>
-        <p class="site-subtitle">Masuk untuk mengelola link kawat bulu</p>
+        <p class="site-subtitle">Masuk ke kazeera.id Admin Panel</p>
       </div>
 
       <div id="login-alert" class="alert alert-danger" style="display: none;"></div>
@@ -48,8 +48,8 @@
       <!-- Admin Top Navbar -->
       <header class="admin-header">
         <div class="admin-title-group">
-          <span style="font-size: 24px;">🌻</span>
-          <h1 class="admin-title">Admin Kawat Bulu Picks</h1>
+          <span style="font-size: 24px;">🌸</span>
+          <h1 class="admin-title">Admin kazeera.id</h1>
         </div>
         <div style="display: flex; gap: 10px; align-items: center;">
           <a href="/" target="_blank" class="btn btn-secondary btn-sm">Lihat Website ↗</a>
@@ -96,12 +96,20 @@
 
         <div class="form-group">
           <label class="form-label" for="form-title">Nama Produk *</label>
-          <input type="text" id="form-title" class="form-input" placeholder="Contoh: Wireless Mechanical Keyboard" maxlength="200" required>
+          <input type="text" id="form-title" class="form-input" placeholder="Contoh: Cardigan Rajut Oversize Korean Style" maxlength="200" required>
         </div>
 
         <div class="form-group">
           <label class="form-label" for="form-url">Link Shopee Affiliate *</label>
           <input type="url" id="form-url" class="form-input" placeholder="https://s.shopee.co.id/xxxxx" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="form-category">Katalog Kategori *</label>
+          <select id="form-category" class="form-select" required>
+            <option value="kawat_bulu">Kawat Bulu</option>
+            <option value="fashion">Fashion</option>
+          </select>
         </div>
 
         <div style="display: flex; gap: 16px;">
@@ -119,7 +127,7 @@
 
         <div class="modal-actions">
           <button type="button" onclick="closeProductModal()" class="btn btn-secondary">Batal</button>
-          <button type="submit" class="btn btn-primary" id="btn-save-product">Simpan Produk ♡</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-product">Simpan Produk 🌸</button>
         </div>
       </form>
     </div>
@@ -202,6 +210,12 @@
       checkAuth();
     }
 
+    // Format Category Name
+    function formatCategory(cat) {
+      if (cat === 'fashion') return 'Fashion';
+      return 'Kawat Bulu';
+    }
+
     // Load Admin Products
     async function loadAdminProducts() {
       const container = document.getElementById('admin-products-list');
@@ -240,7 +254,10 @@
             </div>
 
             <div class="admin-product-meta">
-              <span class="badge badge-order">Urutan: ${product.sort_order}</span>
+              <div style="display: flex; gap: 8px;">
+                <span class="badge badge-order">Katalog: ${formatCategory(product.category)}</span>
+                <span class="badge badge-order">Urutan: ${product.sort_order}</span>
+              </div>
               
               <div class="action-buttons">
                 <button onclick="toggleActive('${product.id}', ${!product.is_active})" class="btn btn-secondary btn-sm">
@@ -287,12 +304,14 @@
         document.getElementById('form-product-id').value = product.id;
         document.getElementById('form-title').value = product.title;
         document.getElementById('form-url').value = product.affiliate_url;
+        document.getElementById('form-category').value = product.category || 'kawat_bulu';
         document.getElementById('form-sort').value = product.sort_order;
         document.getElementById('form-active').checked = product.is_active;
       } else {
         document.getElementById('modal-form-title').textContent = 'Tambah Produk Baru';
         document.getElementById('form-product-id').value = '';
         document.getElementById('product-form').reset();
+        document.getElementById('form-category').value = 'kawat_bulu';
         document.getElementById('form-sort').value = 0;
         document.getElementById('form-active').checked = true;
       }
@@ -325,10 +344,11 @@
       const id = document.getElementById('form-product-id').value;
       const title = document.getElementById('form-title').value.trim();
       const affiliate_url = document.getElementById('form-url').value.trim();
+      const category = document.getElementById('form-category').value;
       const sort_order = parseInt(document.getElementById('form-sort').value, 10) || 0;
       const is_active = document.getElementById('form-active').checked;
 
-      const payload = { title, affiliate_url, sort_order, is_active };
+      const payload = { title, affiliate_url, category, sort_order, is_active };
       const url = id ? `/api/admin/products/${id}` : '/api/admin/products';
       const method = id ? 'PUT' : 'POST';
 

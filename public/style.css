@@ -109,6 +109,42 @@ body {
   border: 1px solid #FFE4E6;
 }
 
+/* Category Tab Filter Navigation */
+.category-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.category-tab {
+  padding: 10px 20px;
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 700;
+  border-radius: var(--radius-pill);
+  border: 2px solid #FBCFE8;
+  background-color: rgba(255, 255, 255, 0.9);
+  color: var(--color-pink-dark);
+  cursor: pointer;
+  transition: var(--transition-bounce);
+}
+
+.category-tab:hover {
+  background-color: #FFE4E6;
+  border-color: #F472B6;
+  transform: translateY(-2px);
+}
+
+.category-tab.active {
+  background: linear-gradient(135deg, #EC4899, #DB2777);
+  border-color: #EC4899;
+  color: white;
+  box-shadow: 0 4px 14px rgba(236, 72, 153, 0.35);
+}
+
 /* Product List Container */
 .product-list {
   display: flex;
