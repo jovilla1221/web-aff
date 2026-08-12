@@ -4,9 +4,9 @@ const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const { createClient } = require('@supabase/supabase-js');
 
-// Supabase Environment Variables
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Supabase Environment Variables (Supports manual env vars & Vercel Storage integration)
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const useSupabase = !!(SUPABASE_URL && SUPABASE_KEY);
 let supabase = null;
