@@ -2,27 +2,28 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
-const { Redis } = require('@upstash/redis');
+const { createClient } = require('@supabase/supabase-js');
 
-// Initialize Redis if URL is provided
-const useRedis = !!process.env.UPSTASH_REDIS_REST_URL;
-let redis = null;
-if (useRedis) {
-  redis = new Redis({
-    url: process.env.UPSTASH_REDIS_REST_URL,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN,
-  });
-  console.log("🌸 Database Mode: Upstash Redis (Vercel Integration)");
+// Supabase Environment Variables
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+const useSupabase = !!(SUPABASE_URL && SUPABASE_KEY);
+let supabase = null;
+
+if (useSupabase) {
+  supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+  console.log("⚡ Database Mode: Supabase (PostgreSQL Cloud)");
 } else {
-  console.log("⚠️ Database Mode: Local JSON Files (NOT persistent on Vercel)");
+  console.log("⚠️ Database Mode: Local JSON Files (Fallback - missing SUPABASE_URL/SUPABASE_KEY)");
 }
 
 const DATA_DIR = path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'products.json');
 const CATEGORIES_FILE = path.join(DATA_DIR, 'categories.json');
 
-// Ensure data directory exists for local mode
-if (!useRedis && !fs.existsSync(DATA_DIR)) {
+// Ensure data directory exists for local JSON mode
+if (!useSupabase && !fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
@@ -96,19 +97,11 @@ const DEFAULT_PRODUCTS = [
   },
 ];
 
-// -----------------------------------------------------
-// LOW-LEVEL READ/WRITE HANDLERS
-// -----------------------------------------------------
-
-async function readProductsData() {
-  if (useRedis) {
-    const data = await redis.get('kazeera_products');
-    return data || DEFAULT_PRODUCTS;
-  }
-  
+// Helper: Local JSON Read/Write
+function readProductsJson() {
   try {
     if (!fs.existsSync(DATA_FILE)) {
-      await writeProductsData(DEFAULT_PRODUCTS);
+      writeProductsJson(DEFAULT_PRODUCTS);
       return DEFAULT_PRODUCTS;
     }
     const raw = fs.readFileSync(DATA_FILE, 'utf8');
@@ -123,12 +116,7 @@ async function readProductsData() {
   }
 }
 
-async function writeProductsData(data) {
-  if (useRedis) {
-    await redis.set('kazeera_products', data);
-    return;
-  }
-
+function writeProductsJson(data) {
   try {
     fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf8');
   } catch (error) {
@@ -136,15 +124,10 @@ async function writeProductsData(data) {
   }
 }
 
-async function readCategoriesData() {
-  if (useRedis) {
-    const data = await redis.get('kazeera_categories');
-    return data || DEFAULT_CATEGORIES;
-  }
-
+function readCategoriesJson() {
   try {
     if (!fs.existsSync(CATEGORIES_FILE)) {
-      await writeCategoriesData(DEFAULT_CATEGORIES);
+      writeCategoriesJson(DEFAULT_CATEGORIES);
       return DEFAULT_CATEGORIES;
     }
     const raw = fs.readFileSync(CATEGORIES_FILE, 'utf8');
@@ -155,12 +138,7 @@ async function readCategoriesData() {
   }
 }
 
-async function writeCategoriesData(data) {
-  if (useRedis) {
-    await redis.set('kazeera_categories', data);
-    return;
-  }
-
+function writeCategoriesJson(data) {
   try {
     fs.writeFileSync(CATEGORIES_FILE, JSON.stringify(data, null, 2), 'utf8');
   } catch (error) {
@@ -181,24 +159,35 @@ function slugify(text) {
 }
 
 // -----------------------------------------------------
-// ASYNC DATABASE OPERATIONS
+// DATABASE OPERATIONS (SUPABASE OR LOCAL JSON FALLBACK)
 // -----------------------------------------------------
 
 const db = {
   // Category Operations
   getAllCategories: async () => {
-    const categories = await readCategoriesData();
+    if (useSupabase) {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('sort_order', { ascending: true });
+
+      if (error) {
+        console.error('Supabase fetch categories error:', error);
+        return DEFAULT_CATEGORIES;
+      }
+      if (!data || data.length === 0) {
+        await supabase.from('categories').insert(DEFAULT_CATEGORIES);
+        return DEFAULT_CATEGORIES;
+      }
+      return data;
+    }
+
+    const categories = readCategoriesJson();
     return categories.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
   },
 
   createCategory: async ({ name, sort_order = 0 }) => {
-    const categories = await readCategoriesData();
     let id = slugify(name);
-
-    if (categories.some((c) => c.id === id)) {
-      id = `${id}_${Date.now()}`;
-    }
-
     const newCategory = {
       id,
       name: name.trim(),
@@ -206,36 +195,113 @@ const db = {
       created_at: new Date().toISOString(),
     };
 
+    if (useSupabase) {
+      const { data, error } = await supabase
+        .from('categories')
+        .insert([newCategory])
+        .select()
+        .single();
+
+      if (error) {
+        if (error.code === '23505') { // Duplicate key
+          newCategory.id = `${id}_${Date.now()}`;
+          const { data: retryData } = await supabase
+            .from('categories')
+            .insert([newCategory])
+            .select()
+            .single();
+          return retryData || newCategory;
+        }
+        console.error('Supabase create category error:', error);
+        throw error;
+      }
+      return data;
+    }
+
+    const categories = readCategoriesJson();
+    if (categories.some((c) => c.id === id)) {
+      newCategory.id = `${id}_${Date.now()}`;
+    }
     categories.push(newCategory);
-    await writeCategoriesData(categories);
+    writeCategoriesJson(categories);
     return newCategory;
   },
 
   updateCategory: async (id, { name, sort_order }) => {
-    const categories = await readCategoriesData();
+    if (useSupabase) {
+      const updates = {};
+      if (name !== undefined) updates.name = name.trim();
+      if (sort_order !== undefined) updates.sort_order = Number(sort_order);
+
+      const { data, error } = await supabase
+        .from('categories')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Supabase update category error:', error);
+        return null;
+      }
+      return data;
+    }
+
+    const categories = readCategoriesJson();
     const index = categories.findIndex((c) => c.id === id);
     if (index === -1) return null;
 
     if (name !== undefined) categories[index].name = name.trim();
     if (sort_order !== undefined) categories[index].sort_order = Number(sort_order);
 
-    await writeCategoriesData(categories);
+    writeCategoriesJson(categories);
     return categories[index];
   },
 
   deleteCategory: async (id) => {
-    let categories = await readCategoriesData();
+    if (useSupabase) {
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Supabase delete category error:', error);
+        return false;
+      }
+      return true;
+    }
+
+    let categories = readCategoriesJson();
     const index = categories.findIndex((c) => c.id === id);
     if (index === -1) return false;
 
     categories = categories.filter((c) => c.id !== id);
-    await writeCategoriesData(categories);
+    writeCategoriesJson(categories);
     return true;
   },
 
   // Product Operations
   getActiveProducts: async () => {
-    const products = await readProductsData();
+    if (useSupabase) {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
+
+      if (error) {
+        console.error('Supabase fetch active products error:', error);
+        return DEFAULT_PRODUCTS;
+      }
+      if (!data || data.length === 0) {
+        await supabase.from('products').insert(DEFAULT_PRODUCTS);
+        return DEFAULT_PRODUCTS;
+      }
+      return data;
+    }
+
+    const products = readProductsJson();
     return products
       .filter((p) => p.is_active)
       .sort((a, b) => {
@@ -247,7 +313,24 @@ const db = {
   },
 
   getAllProducts: async () => {
-    const products = await readProductsData();
+    if (useSupabase) {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('sort_order', { ascending: true });
+
+      if (error) {
+        console.error('Supabase fetch all products error:', error);
+        return DEFAULT_PRODUCTS;
+      }
+      if (!data || data.length === 0) {
+        await supabase.from('products').insert(DEFAULT_PRODUCTS);
+        return DEFAULT_PRODUCTS;
+      }
+      return data;
+    }
+
+    const products = readProductsJson();
     return products.sort((a, b) => {
       if (a.sort_order !== b.sort_order) {
         return a.sort_order - b.sort_order;
@@ -257,12 +340,22 @@ const db = {
   },
 
   getProductById: async (id) => {
-    const products = await readProductsData();
+    if (useSupabase) {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) return null;
+      return data;
+    }
+
+    const products = readProductsJson();
     return products.find((p) => p.id === id) || null;
   },
 
   createProduct: async ({ title, affiliate_url, category = 'kawat_bulu', sort_order = 0, is_active = true }) => {
-    const products = await readProductsData();
     const newProduct = {
       id: uuidv4(),
       title: title.trim(),
@@ -273,13 +366,51 @@ const db = {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
+
+    if (useSupabase) {
+      const { data, error } = await supabase
+        .from('products')
+        .insert([newProduct])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Supabase create product error:', error);
+        throw error;
+      }
+      return data;
+    }
+
+    const products = readProductsJson();
     products.push(newProduct);
-    await writeProductsData(products);
+    writeProductsJson(products);
     return newProduct;
   },
 
   updateProduct: async (id, { title, affiliate_url, category, sort_order, is_active }) => {
-    const products = await readProductsData();
+    if (useSupabase) {
+      const updates = { updated_at: new Date().toISOString() };
+      if (title !== undefined) updates.title = title.trim();
+      if (affiliate_url !== undefined) updates.affiliate_url = affiliate_url.trim();
+      if (category !== undefined) updates.category = category.trim();
+      if (sort_order !== undefined) updates.sort_order = Number(sort_order);
+      if (is_active !== undefined) updates.is_active = Boolean(is_active);
+
+      const { data, error } = await supabase
+        .from('products')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Supabase update product error:', error);
+        return null;
+      }
+      return data;
+    }
+
+    const products = readProductsJson();
     const index = products.findIndex((p) => p.id === id);
     if (index === -1) return null;
 
@@ -290,17 +421,30 @@ const db = {
     if (is_active !== undefined) products[index].is_active = Boolean(is_active);
     products[index].updated_at = new Date().toISOString();
 
-    await writeProductsData(products);
+    writeProductsJson(products);
     return products[index];
   },
 
   deleteProduct: async (id) => {
-    let products = await readProductsData();
+    if (useSupabase) {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Supabase delete product error:', error);
+        return false;
+      }
+      return true;
+    }
+
+    let products = readProductsJson();
     const index = products.findIndex((p) => p.id === id);
     if (index === -1) return false;
 
     products = products.filter((p) => p.id !== id);
-    await writeProductsData(products);
+    writeProductsJson(products);
     return true;
   },
 };

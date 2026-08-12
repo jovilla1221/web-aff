@@ -9,6 +9,7 @@
     "dev": "node server.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.112.3",
     "@upstash/redis": "^1.38.2",
     "bcryptjs": "^2.4.3",
     "dotenv": "^17.4.2",
