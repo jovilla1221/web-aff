@@ -150,7 +150,12 @@ app.post('/api/admin/categories', requireAuth, (req, res) => {
       sort_order: sort_order !== undefined ? parseInt(sort_order, 10) : 0,
     });
 
-    return res.status(201).json(newCategory);
+    const allCategories = db.getAllCategories();
+    return res.status(201).json({
+      success: true,
+      category: newCategory,
+      categories: allCategories,
+    });
   } catch (error) {
     console.error('Error creating category:', error);
     return res.status(500).json({ error: 'Gagal menyimpan kategori baru' });
@@ -172,7 +177,12 @@ app.put('/api/admin/categories/:id', requireAuth, (req, res) => {
       return res.status(404).json({ error: 'Kategori tidak ditemukan' });
     }
 
-    return res.json(updated);
+    const allCategories = db.getAllCategories();
+    return res.json({
+      success: true,
+      category: updated,
+      categories: allCategories,
+    });
   } catch (error) {
     console.error('Error updating category:', error);
     return res.status(500).json({ error: 'Gagal mengedit kategori' });
@@ -186,7 +196,12 @@ app.delete('/api/admin/categories/:id', requireAuth, (req, res) => {
   try {
     const success = db.deleteCategory(id);
     if (success) {
-      return res.json({ success: true, message: 'Kategori berhasil dihapus' });
+      const allCategories = db.getAllCategories();
+      return res.json({
+        success: true,
+        message: 'Kategori berhasil dihapus',
+        categories: allCategories,
+      });
     }
     return res.status(500).json({ error: 'Gagal menghapus kategori' });
   } catch (error) {

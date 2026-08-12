@@ -124,7 +124,7 @@
 
         <div class="modal-actions">
           <button type="button" onclick="closeCategoryModal()" class="btn btn-secondary">Batal</button>
-          <button type="submit" class="btn btn-primary">Simpan Katalog 🌸</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-category">Simpan Katalog 🌸</button>
         </div>
       </form>
     </div>
@@ -243,10 +243,10 @@
       }
     }
 
-    // Load Admin Categories
+    // Load Admin Categories using public endpoint
     async function loadAdminCategories() {
       try {
-        const res = await fetch('/api/admin/categories');
+        const res = await fetch('/api/categories');
         if (res.ok) {
           categoriesList = await res.json();
           populateCategorySelect();
@@ -283,10 +283,15 @@
 
       try {
         const res = await fetch(`/api/admin/categories/${id}`, { method: 'DELETE' });
-        if (res.ok) {
+        const data = await res.json();
+        if (res.ok && data.categories) {
+          categoriesList = data.categories;
+          populateCategorySelect();
+          renderCategoryBadges();
           showAlert(`Katalog "${name}" berhasil dihapus`, 'success');
-          await loadAdminCategories();
           loadAdminProducts();
+        } else if (res.status === 401) {
+          checkAuth();
         } else {
           alert('Gagal menghapus katalog');
         }
@@ -361,8 +366,16 @@
       const alertEl = document.getElementById('modal-category-alert');
       alertEl.style.display = 'none';
 
-      const name = document.getElementById('form-category-name').value.trim();
-      const sort_order = parseInt(document.getElementById('form-category-sort').value, 10) || 0;
+      const nameInput = document.getElementById('form-category-name');
+      const sortInput = document.getElementById('form-category-sort');
+      const name = nameInput.value.trim();
+      const sort_order = parseInt(sortInput.value, 10) || 0;
+
+      if (!name) {
+        alertEl.textContent = 'Nama katalog wajib diisi';
+        alertEl.style.display = 'block';
+        return;
+      }
 
       try {
         const res = await fetch('/api/admin/categories', {
@@ -372,11 +385,15 @@
         });
         const data = await res.json();
 
-        if (res.ok) {
+        if (res.ok && data.categories) {
+          categoriesList = data.categories;
+          populateCategorySelect();
+          renderCategoryBadges();
           closeCategoryModal();
           showAlert(`Katalog baru "${name}" berhasil ditambahkan! 🌸`, 'success');
-          await loadAdminCategories();
           loadAdminProducts();
+        } else if (res.status === 401) {
+          checkAuth();
         } else {
           alertEl.textContent = data.error || 'Gagal menyimpan katalog';
           alertEl.style.display = 'block';
@@ -535,6 +552,8 @@
           closeProductModal();
           showAlert('Produk berhasil disimpan! 🌸', 'success');
           loadAdminProducts();
+        } else if (res.status === 401) {
+          checkAuth();
         } else {
           modalAlert.textContent = data.error || 'Gagal menyimpan produk';
           modalAlert.style.display = 'block';

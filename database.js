@@ -133,15 +133,16 @@ function writeCategories(data) {
   }
 }
 
-// Helper: Slugify category name
+// Helper: Slugify category name safely
 function slugify(text) {
-  return text
+  const slug = text
     .toString()
     .toLowerCase()
     .trim()
     .replace(/\s+/g, '_')
     .replace(/[^\w\-]+/g, '')
     .replace(/\-\-+/g, '_');
+  return slug || `cat_${Date.now()}`;
 }
 
 // Database Operations
