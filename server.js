@@ -6,7 +6,7 @@ const db = require('./database');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Trust proxy (Cloudflare tunnel, localtunnel, etc.) so cookies work over HTTPS
+// Trust proxy (Cloudflare tunnel, localtunnel, Vercel etc.) so cookies work over HTTPS
 app.set('trust proxy', 1);
 
 // Admin Default Credentials
@@ -26,7 +26,7 @@ app.use(
     cookie: {
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       httpOnly: true,
-      secure: true,     // Required for SameSite=None over HTTPS tunnels
+      secure: process.env.NODE_ENV === 'production' || !!process.env.VERCEL, // True in production/Vercel
       sameSite: 'none',  // Allow cookie to be sent cross-site (tunnel proxy)
     },
   })
@@ -58,9 +58,9 @@ function isValidUrl(string) {
 // ==========================================
 
 // GET /api/categories — Fetch all categories for public tabs
-app.get('/api/categories', (req, res) => {
+app.get('/api/categories', async (req, res) => {
   try {
-    const categories = db.getAllCategories();
+    const categories = await db.getAllCategories();
     return res.json(categories);
   } catch (error) {
     console.error('Error fetching categories:', error);
@@ -69,9 +69,9 @@ app.get('/api/categories', (req, res) => {
 });
 
 // GET /api/products — Fetch active products for homepage
-app.get('/api/products', (req, res) => {
+app.get('/api/products', async (req, res) => {
   try {
-    const products = db.getActiveProducts();
+    const products = await db.getActiveProducts();
     const publicProducts = products.map((p) => ({
       id: p.id,
       title: p.title,
@@ -130,9 +130,9 @@ app.get('/api/admin/check-auth', (req, res) => {
 // ==========================================
 
 // GET /api/admin/categories — List all categories
-app.get('/api/admin/categories', requireAuth, (req, res) => {
+app.get('/api/admin/categories', requireAuth, async (req, res) => {
   try {
-    const categories = db.getAllCategories();
+    const categories = await db.getAllCategories();
     return res.json(categories);
   } catch (error) {
     console.error('Error fetching admin categories:', error);
@@ -141,7 +141,7 @@ app.get('/api/admin/categories', requireAuth, (req, res) => {
 });
 
 // POST /api/admin/categories — Create category
-app.post('/api/admin/categories', requireAuth, (req, res) => {
+app.post('/api/admin/categories', requireAuth, async (req, res) => {
   const { name, sort_order } = req.body;
 
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
@@ -149,12 +149,12 @@ app.post('/api/admin/categories', requireAuth, (req, res) => {
   }
 
   try {
-    const newCategory = db.createCategory({
+    const newCategory = await db.createCategory({
       name,
       sort_order: sort_order !== undefined ? parseInt(sort_order, 10) : 0,
     });
 
-    const allCategories = db.getAllCategories();
+    const allCategories = await db.getAllCategories();
     return res.status(201).json({
       success: true,
       category: newCategory,
@@ -167,12 +167,12 @@ app.post('/api/admin/categories', requireAuth, (req, res) => {
 });
 
 // PUT /api/admin/categories/:id — Update category
-app.put('/api/admin/categories/:id', requireAuth, (req, res) => {
+app.put('/api/admin/categories/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
   const { name, sort_order } = req.body;
 
   try {
-    const updated = db.updateCategory(id, {
+    const updated = await db.updateCategory(id, {
       name,
       sort_order: sort_order !== undefined ? parseInt(sort_order, 10) : undefined,
     });
@@ -181,7 +181,7 @@ app.put('/api/admin/categories/:id', requireAuth, (req, res) => {
       return res.status(404).json({ error: 'Kategori tidak ditemukan' });
     }
 
-    const allCategories = db.getAllCategories();
+    const allCategories = await db.getAllCategories();
     return res.json({
       success: true,
       category: updated,
@@ -194,13 +194,13 @@ app.put('/api/admin/categories/:id', requireAuth, (req, res) => {
 });
 
 // DELETE /api/admin/categories/:id — Delete category
-app.delete('/api/admin/categories/:id', requireAuth, (req, res) => {
+app.delete('/api/admin/categories/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
 
   try {
-    const success = db.deleteCategory(id);
+    const success = await db.deleteCategory(id);
     if (success) {
-      const allCategories = db.getAllCategories();
+      const allCategories = await db.getAllCategories();
       return res.json({
         success: true,
         message: 'Kategori berhasil dihapus',
@@ -219,9 +219,9 @@ app.delete('/api/admin/categories/:id', requireAuth, (req, res) => {
 // ==========================================
 
 // GET /api/admin/products — List all products (active & inactive)
-app.get('/api/admin/products', requireAuth, (req, res) => {
+app.get('/api/admin/products', requireAuth, async (req, res) => {
   try {
-    const products = db.getAllProducts();
+    const products = await db.getAllProducts();
     return res.json(products);
   } catch (error) {
     console.error('Error fetching admin products:', error);
@@ -230,10 +230,9 @@ app.get('/api/admin/products', requireAuth, (req, res) => {
 });
 
 // POST /api/admin/products — Create new product
-app.post('/api/admin/products', requireAuth, (req, res) => {
+app.post('/api/admin/products', requireAuth, async (req, res) => {
   const { title, affiliate_url, category, sort_order, is_active } = req.body;
 
-  // Validation
   if (!title || typeof title !== 'string' || title.trim().length === 0) {
     return res.status(400).json({ error: 'Nama produk (title) wajib diisi' });
   }
@@ -247,7 +246,7 @@ app.post('/api/admin/products', requireAuth, (req, res) => {
   }
 
   try {
-    const newProduct = db.createProduct({
+    const newProduct = await db.createProduct({
       title,
       affiliate_url,
       category: category || 'kawat_bulu',
@@ -263,11 +262,11 @@ app.post('/api/admin/products', requireAuth, (req, res) => {
 });
 
 // PUT /api/admin/products/:id — Update existing product
-app.put('/api/admin/products/:id', requireAuth, (req, res) => {
+app.put('/api/admin/products/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
   const { title, affiliate_url, category, sort_order, is_active } = req.body;
 
-  const existing = db.getProductById(id);
+  const existing = await db.getProductById(id);
   if (!existing) {
     return res.status(404).json({ error: 'Produk tidak ditemukan' });
   }
@@ -288,7 +287,7 @@ app.put('/api/admin/products/:id', requireAuth, (req, res) => {
   }
 
   try {
-    const updated = db.updateProduct(id, {
+    const updated = await db.updateProduct(id, {
       title,
       affiliate_url,
       category,
@@ -304,15 +303,15 @@ app.put('/api/admin/products/:id', requireAuth, (req, res) => {
 });
 
 // DELETE /api/admin/products/:id — Delete product
-app.delete('/api/admin/products/:id', requireAuth, (req, res) => {
+app.delete('/api/admin/products/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
-  const existing = db.getProductById(id);
+  const existing = await db.getProductById(id);
   if (!existing) {
     return res.status(404).json({ error: 'Produk tidak ditemukan' });
   }
 
   try {
-    const success = db.deleteProduct(id);
+    const success = await db.deleteProduct(id);
     if (success) {
       return res.json({ success: true, message: 'Produk berhasil dihapus' });
     }
@@ -327,18 +326,21 @@ app.delete('/api/admin/products/:id', requireAuth, (req, res) => {
 // ROUTE FALLBACKS
 // ==========================================
 
-// Serve admin page on /admin
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
-// Catch-all route to serve public index.html
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Start Server
-app.listen(PORT, () => {
-  console.log(`✨ Server Shopee Affiliate Link List berjalan di http://localhost:${PORT}`);
-  console.log(`🔑 Admin Login: http://localhost:${PORT}/admin (User: ${ADMIN_USERNAME}, Pass: ${ADMIN_PASSWORD})`);
-});
+// Only start the server if not running in a Vercel serverless environment
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`✨ Server Shopee Affiliate berjalan di http://localhost:${PORT}`);
+    console.log(`🔑 Admin Login: http://localhost:${PORT}/admin (User: ${ADMIN_USERNAME})`);
+  });
+}
+
+// Export the app for Vercel
+module.exports = app;

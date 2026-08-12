@@ -1,13 +1,28 @@
+require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const { Redis } = require('@upstash/redis');
+
+// Initialize Redis if URL is provided
+const useRedis = !!process.env.UPSTASH_REDIS_REST_URL;
+let redis = null;
+if (useRedis) {
+  redis = new Redis({
+    url: process.env.UPSTASH_REDIS_REST_URL,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN,
+  });
+  console.log("🌸 Database Mode: Upstash Redis (Vercel Integration)");
+} else {
+  console.log("⚠️ Database Mode: Local JSON Files (NOT persistent on Vercel)");
+}
 
 const DATA_DIR = path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'products.json');
 const CATEGORIES_FILE = path.join(DATA_DIR, 'categories.json');
 
-// Ensure data directory exists
-if (!fs.existsSync(DATA_DIR)) {
+// Ensure data directory exists for local mode
+if (!useRedis && !fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
@@ -81,11 +96,19 @@ const DEFAULT_PRODUCTS = [
   },
 ];
 
-// Read products from file
-function readData() {
+// -----------------------------------------------------
+// LOW-LEVEL READ/WRITE HANDLERS
+// -----------------------------------------------------
+
+async function readProductsData() {
+  if (useRedis) {
+    const data = await redis.get('kazeera_products');
+    return data || DEFAULT_PRODUCTS;
+  }
+  
   try {
     if (!fs.existsSync(DATA_FILE)) {
-      writeData(DEFAULT_PRODUCTS);
+      await writeProductsData(DEFAULT_PRODUCTS);
       return DEFAULT_PRODUCTS;
     }
     const raw = fs.readFileSync(DATA_FILE, 'utf8');
@@ -95,25 +118,33 @@ function readData() {
       category: item.category || 'kawat_bulu',
     }));
   } catch (error) {
-    console.error('Error reading database file:', error);
+    console.error('Error reading products file:', error);
     return DEFAULT_PRODUCTS;
   }
 }
 
-// Write products to file
-function writeData(data) {
+async function writeProductsData(data) {
+  if (useRedis) {
+    await redis.set('kazeera_products', data);
+    return;
+  }
+
   try {
     fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf8');
   } catch (error) {
-    console.error('Error writing database file:', error);
+    console.error('Error writing products file:', error);
   }
 }
 
-// Read categories from file
-function readCategories() {
+async function readCategoriesData() {
+  if (useRedis) {
+    const data = await redis.get('kazeera_categories');
+    return data || DEFAULT_CATEGORIES;
+  }
+
   try {
     if (!fs.existsSync(CATEGORIES_FILE)) {
-      writeCategories(DEFAULT_CATEGORIES);
+      await writeCategoriesData(DEFAULT_CATEGORIES);
       return DEFAULT_CATEGORIES;
     }
     const raw = fs.readFileSync(CATEGORIES_FILE, 'utf8');
@@ -124,8 +155,12 @@ function readCategories() {
   }
 }
 
-// Write categories to file
-function writeCategories(data) {
+async function writeCategoriesData(data) {
+  if (useRedis) {
+    await redis.set('kazeera_categories', data);
+    return;
+  }
+
   try {
     fs.writeFileSync(CATEGORIES_FILE, JSON.stringify(data, null, 2), 'utf8');
   } catch (error) {
@@ -145,19 +180,21 @@ function slugify(text) {
   return slug || `cat_${Date.now()}`;
 }
 
-// Database Operations
+// -----------------------------------------------------
+// ASYNC DATABASE OPERATIONS
+// -----------------------------------------------------
+
 const db = {
   // Category Operations
-  getAllCategories: () => {
-    const categories = readCategories();
+  getAllCategories: async () => {
+    const categories = await readCategoriesData();
     return categories.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
   },
 
-  createCategory: ({ name, sort_order = 0 }) => {
-    const categories = readCategories();
+  createCategory: async ({ name, sort_order = 0 }) => {
+    const categories = await readCategoriesData();
     let id = slugify(name);
 
-    // If ID exists, append timestamp
     if (categories.some((c) => c.id === id)) {
       id = `${id}_${Date.now()}`;
     }
@@ -170,35 +207,35 @@ const db = {
     };
 
     categories.push(newCategory);
-    writeCategories(categories);
+    await writeCategoriesData(categories);
     return newCategory;
   },
 
-  updateCategory: (id, { name, sort_order }) => {
-    const categories = readCategories();
+  updateCategory: async (id, { name, sort_order }) => {
+    const categories = await readCategoriesData();
     const index = categories.findIndex((c) => c.id === id);
     if (index === -1) return null;
 
     if (name !== undefined) categories[index].name = name.trim();
     if (sort_order !== undefined) categories[index].sort_order = Number(sort_order);
 
-    writeCategories(categories);
+    await writeCategoriesData(categories);
     return categories[index];
   },
 
-  deleteCategory: (id) => {
-    let categories = readCategories();
+  deleteCategory: async (id) => {
+    let categories = await readCategoriesData();
     const index = categories.findIndex((c) => c.id === id);
     if (index === -1) return false;
 
     categories = categories.filter((c) => c.id !== id);
-    writeCategories(categories);
+    await writeCategoriesData(categories);
     return true;
   },
 
   // Product Operations
-  getActiveProducts: () => {
-    const products = readData();
+  getActiveProducts: async () => {
+    const products = await readProductsData();
     return products
       .filter((p) => p.is_active)
       .sort((a, b) => {
@@ -209,8 +246,8 @@ const db = {
       });
   },
 
-  getAllProducts: () => {
-    const products = readData();
+  getAllProducts: async () => {
+    const products = await readProductsData();
     return products.sort((a, b) => {
       if (a.sort_order !== b.sort_order) {
         return a.sort_order - b.sort_order;
@@ -219,13 +256,13 @@ const db = {
     });
   },
 
-  getProductById: (id) => {
-    const products = readData();
+  getProductById: async (id) => {
+    const products = await readProductsData();
     return products.find((p) => p.id === id) || null;
   },
 
-  createProduct: ({ title, affiliate_url, category = 'kawat_bulu', sort_order = 0, is_active = true }) => {
-    const products = readData();
+  createProduct: async ({ title, affiliate_url, category = 'kawat_bulu', sort_order = 0, is_active = true }) => {
+    const products = await readProductsData();
     const newProduct = {
       id: uuidv4(),
       title: title.trim(),
@@ -237,12 +274,12 @@ const db = {
       updated_at: new Date().toISOString(),
     };
     products.push(newProduct);
-    writeData(products);
+    await writeProductsData(products);
     return newProduct;
   },
 
-  updateProduct: (id, { title, affiliate_url, category, sort_order, is_active }) => {
-    const products = readData();
+  updateProduct: async (id, { title, affiliate_url, category, sort_order, is_active }) => {
+    const products = await readProductsData();
     const index = products.findIndex((p) => p.id === id);
     if (index === -1) return null;
 
@@ -253,17 +290,17 @@ const db = {
     if (is_active !== undefined) products[index].is_active = Boolean(is_active);
     products[index].updated_at = new Date().toISOString();
 
-    writeData(products);
+    await writeProductsData(products);
     return products[index];
   },
 
-  deleteProduct: (id) => {
-    let products = readData();
+  deleteProduct: async (id) => {
+    let products = await readProductsData();
     const index = products.findIndex((p) => p.id === id);
     if (index === -1) return false;
 
     products = products.filter((p) => p.id !== id);
-    writeData(products);
+    await writeProductsData(products);
     return true;
   },
 };
