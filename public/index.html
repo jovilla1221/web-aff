@@ -29,8 +29,19 @@
       </div>
     </header>
 
-    <!-- Main Content: Catalog Category Filter & Product List -->
+    <!-- Main Content: Search Bar, Category Filter & Product List -->
     <main>
+      <!-- Live Search Bar Input -->
+      <div class="search-container">
+        <span class="search-icon">🔍</span>
+        <input type="text" 
+               id="search-input" 
+               class="search-input" 
+               placeholder="Cari rekomendasi produk..." 
+               aria-label="Cari rekomendasi produk"
+               oninput="handleSearch(this.value)">
+      </div>
+
       <!-- Dynamic Category Tabs -->
       <nav id="category-tabs" class="category-tabs" aria-label="Katalog Kategori">
         <button onclick="filterCategory('all')" class="category-tab active" id="tab-all">Semua</button>
@@ -66,6 +77,7 @@
     let allProducts = [];
     let categoriesList = [];
     let activeCategory = 'all';
+    let searchQuery = '';
 
     async function fetchCategories() {
       try {
@@ -81,14 +93,24 @@
 
     function renderCategoryTabs() {
       const container = document.getElementById('category-tabs');
-      let html = `<button onclick="filterCategory('all')" class="category-tab ${activeCategory === 'all' ? 'active' : ''}" id="tab-all">Semua</button>`;
+
+      // Calculate counts per category
+      const totalCount = allProducts.length;
+      let html = `
+        <button onclick="filterCategory('all')" 
+                class="category-tab ${activeCategory === 'all' ? 'active' : ''}" 
+                id="tab-all">
+          Semua (${totalCount})
+        </button>
+      `;
 
       categoriesList.forEach(cat => {
+        const count = allProducts.filter(p => p.category === cat.id).length;
         html += `
           <button onclick="filterCategory('${escapeHtml(cat.id)}')" 
                   class="category-tab ${activeCategory === cat.id ? 'active' : ''}" 
                   id="tab-${escapeHtml(cat.id)}">
-            ${escapeHtml(cat.name)}
+            ${escapeHtml(cat.name)} (${count})
           </button>
         `;
       });
@@ -104,6 +126,7 @@
           throw new Error('Gagal mengambil data produk');
         }
         allProducts = await response.json();
+        renderCategoryTabs();
         renderProducts();
       } catch (error) {
         console.error(error);
@@ -116,6 +139,11 @@
       }
     }
 
+    function handleSearch(query) {
+      searchQuery = query.toLowerCase().trim();
+      renderProducts();
+    }
+
     function filterCategory(cat) {
       activeCategory = cat;
       renderCategoryTabs();
@@ -126,14 +154,23 @@
       const container = document.getElementById('product-list');
 
       let filtered = allProducts;
+
+      // Filter by category
       if (activeCategory !== 'all') {
-        filtered = allProducts.filter(p => p.category === activeCategory);
+        filtered = filtered.filter(p => p.category === activeCategory);
+      }
+
+      // Filter by search query
+      if (searchQuery) {
+        filtered = filtered.filter(p => p.title.toLowerCase().includes(searchQuery));
       }
 
       if (!filtered || filtered.length === 0) {
         container.innerHTML = `
           <div class="empty-state">
-            <p>Belum ada produk rekomendasi pada katalog ini.</p>
+            <p style="font-size: 28px; margin-bottom: 8px;">🌸</p>
+            <p>${searchQuery ? 'Tidak ada produk yang cocok dengan pencarian Anda.' : 'Belum ada produk rekomendasi pada katalog ini.'}</p>
+            ${searchQuery ? '<button onclick="clearSearch()" class="btn btn-secondary btn-sm" style="margin-top: 12px;">Bersihkan Pencarian</button>' : ''}
           </div>
         `;
         return;
@@ -149,6 +186,13 @@
           <span class="arrow-badge" aria-hidden="true">↗</span>
         </a>
       `).join('');
+    }
+
+    function clearSearch() {
+      const searchInput = document.getElementById('search-input');
+      if (searchInput) searchInput.value = '';
+      searchQuery = '';
+      renderProducts();
     }
 
     function escapeHtml(text) {
