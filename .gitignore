@@ -1,0 +1,5 @@
+node_modules/
+cloudflared
+.DS_Store
+.env
+cookies.txt

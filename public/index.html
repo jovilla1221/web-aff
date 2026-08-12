@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rekomendasi — Kawat Bulu & DIY Craft</title>
+  <meta name="description" content="Kumpulan rekomendasi kawat bulu (pipe cleaner) dan perlengkapan DIY craft pilihan terbaik di Shopee.">
+  <meta name="keywords" content="Rekomendasi, Kawat Bulu, Pipe Cleaner, DIY Craft, Rekomendasi Shopee">
+  
+  <!-- Open Graph -->
+  <meta property="og:title" content="Rekomendasi — Kawat Bulu & DIY Craft">
+  <meta property="og:description" content="Kumpulan rekomendasi kawat bulu dan perlengkapan DIY craft pilihan terbaik.">
+  <meta property="og:type" content="website">
+
+  <!-- Favicon / Icon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌸</text></svg>">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <div class="container">
+    
+    <!-- Cute Pink Site Header -->
+    <header class="site-header">
+      <div class="banner-card">
+        <h1 class="site-title">Rekomendasi Kawat Bulu & DIY Craft</h1>
+      </div>
+    </header>
+
+    <!-- Main Content: Product List -->
+    <main>
+      <div id="product-list" class="product-list" aria-label="Daftar Rekomendasi Produk">
+        <!-- Loading State -->
+        <div class="loading-state">
+          <div class="loading-spinner"></div>
+          <p>Memuat rekomendasi kawat bulu...</p>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer & Affiliate Disclosure -->
+    <footer class="site-footer">
+      <div class="disclosure-card">
+        <strong>Affiliate Disclosure</strong><br>
+        Beberapa link di website ini merupakan link affiliate Shopee. Kami dapat menerima komisi apabila Anda melakukan pembelian melalui link tersebut tanpa biaya tambahan bagi Anda.
+      </div>
+      <div class="footer-credits">
+        <p>&copy; <span id="year"></span> Kawat Bulu Picks. All rights reserved.</p>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Vanilla JS Script -->
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    async function fetchProducts() {
+      const container = document.getElementById('product-list');
+      try {
+        const response = await fetch('/api/products');
+        if (!response.ok) {
+          throw new Error('Gagal mengambil data produk');
+        }
+        const products = await response.json();
+
+        if (!products || products.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <p>Belum ada produk rekomendasi kawat bulu saat ini.</p>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = products.map((product) => `
+          <a href="${escapeHtml(product.affiliate_url)}" 
+             class="product-link-item" 
+             target="_blank" 
+             rel="nofollow sponsored"
+             title="Buka ${escapeHtml(product.title)} di Shopee">
+            <span class="product-title">${escapeHtml(product.title)}</span>
+            <span class="arrow-badge" aria-hidden="true">↗</span>
+          </a>
+        `).join('');
+
+      } catch (error) {
+        console.error(error);
+        container.innerHTML = `
+          <div class="empty-state">
+            <p>Maaf, terjadi kendala saat memuat rekomendasi kawat bulu.</p>
+            <button onclick="fetchProducts()" class="btn btn-secondary btn-sm" style="margin-top: 12px;">Coba Lagi</button>
+          </div>
+        `;
+      }
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // Load products on start
+    fetchProducts();
+  </script>
+
+</body>
+</html>

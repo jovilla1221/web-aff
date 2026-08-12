@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — Kawat Bulu Picks 🌻</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌻</text></svg>">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <div class="container">
+
+    <!-- ==========================================
+         LOGIN VIEW (Shown when not authenticated)
+         ========================================== -->
+    <div id="login-view" class="auth-card" style="display: none;">
+      <div class="auth-header">
+        <div class="heart-badge" aria-hidden="true" style="background: #FEF9C3; border: 2px solid #FDE047;">🌻</div>
+        <h1 class="auth-title">Admin Login</h1>
+        <p class="site-subtitle">Masuk untuk mengelola link kawat bulu</p>
+      </div>
+
+      <div id="login-alert" class="alert alert-danger" style="display: none;"></div>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label class="form-label" for="username">Username</label>
+          <input type="text" id="username" class="form-input" placeholder="Masukkan username" required autocomplete="username">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <input type="password" id="password" class="form-input" placeholder="Masukkan password" required autocomplete="current-password">
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">
+          Masuk ke Dashboard 🌸
+        </button>
+      </form>
+    </div>
+
+    <!-- ==========================================
+         DASHBOARD VIEW (Shown when authenticated)
+         ========================================== -->
+    <div id="dashboard-view" style="display: none;">
+
+      <!-- Admin Top Navbar -->
+      <header class="admin-header">
+        <div class="admin-title-group">
+          <span style="font-size: 24px;">🌻</span>
+          <h1 class="admin-title">Admin Kawat Bulu Picks</h1>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <a href="/" target="_blank" class="btn btn-secondary btn-sm">Lihat Website ↗</a>
+          <button onclick="handleLogout()" class="btn btn-danger btn-sm">Logout</button>
+        </div>
+      </header>
+
+      <!-- Toolbar & Stats -->
+      <div class="admin-toolbar">
+        <div>
+          <h2 style="font-family: var(--font-heading); font-size: 18px; color: var(--color-text);">Daftar Produk Affiliate</h2>
+          <p id="stats-text" class="site-subtitle" style="font-size: 13px;">Memuat statistik...</p>
+        </div>
+        <button onclick="openProductModal()" class="btn btn-primary">
+          + Tambah Produk
+        </button>
+      </div>
+
+      <div id="admin-alert" class="alert" style="display: none;"></div>
+
+      <!-- Products List Container -->
+      <div id="admin-products-list">
+        <div class="loading-state">
+          <div class="loading-spinner"></div>
+          <p>Memuat data produk...</p>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ==========================================
+       PRODUCT FORM MODAL (Add / Edit)
+       ========================================== -->
+  <div id="product-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <h2 id="modal-form-title" class="modal-title">Tambah Produk Baru</h2>
+      
+      <div id="modal-alert" class="alert alert-danger" style="display: none;"></div>
+
+      <form id="product-form">
+        <input type="hidden" id="form-product-id">
+
+        <div class="form-group">
+          <label class="form-label" for="form-title">Nama Produk *</label>
+          <input type="text" id="form-title" class="form-input" placeholder="Contoh: Wireless Mechanical Keyboard" maxlength="200" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="form-url">Link Shopee Affiliate *</label>
+          <input type="url" id="form-url" class="form-input" placeholder="https://s.shopee.co.id/xxxxx" required>
+        </div>
+
+        <div style="display: flex; gap: 16px;">
+          <div class="form-group" style="flex: 1;">
+            <label class="form-label" for="form-sort">Urutan (Sort Order)</label>
+            <input type="number" id="form-sort" class="form-input" value="0" min="0">
+          </div>
+          <div class="form-group" style="flex: 1; display: flex; align-items: flex-end; padding-bottom: 10px;">
+            <label class="form-checkbox-label">
+              <input type="checkbox" id="form-active" class="form-checkbox" checked>
+              Tampilkan (Aktif)
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" onclick="closeProductModal()" class="btn btn-secondary">Batal</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-product">Simpan Produk ♡</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       DELETE CONFIRMATION MODAL
+       ========================================== -->
+  <div id="delete-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <h2 class="modal-title" style="color: var(--color-danger);">Hapus Produk?</h2>
+      <p style="font-size: 15px; color: var(--color-text); margin-bottom: 12px;">
+        Apakah Anda yakin ingin menghapus produk <strong id="delete-product-title"></strong>?
+      </p>
+      <p style="font-size: 13px; color: var(--color-text-muted);">Tindakan ini tidak dapat dibatalkan.</p>
+
+      <div class="modal-actions">
+        <button type="button" onclick="closeDeleteModal()" class="btn btn-secondary">Batal</button>
+        <button type="button" onclick="confirmDeleteProduct()" class="btn btn-danger">Hapus Produk</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vanilla JS Script -->
+  <script>
+    let deletingProductId = null;
+
+    // Check Auth Status on Load
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/admin/check-auth');
+        const data = await res.json();
+
+        if (data.authenticated) {
+          document.getElementById('login-view').style.display = 'none';
+          document.getElementById('dashboard-view').style.display = 'block';
+          loadAdminProducts();
+        } else {
+          document.getElementById('login-view').style.display = 'block';
+          document.getElementById('dashboard-view').style.display = 'none';
+        }
+      } catch (err) {
+        console.error('Check auth error:', err);
+        document.getElementById('login-view').style.display = 'block';
+      }
+    }
+
+    // Handle Login Submit
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const alertEl = document.getElementById('login-alert');
+      alertEl.style.display = 'none';
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+
+      try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          checkAuth();
+        } else {
+          alertEl.textContent = data.error || 'Login gagal';
+          alertEl.style.display = 'block';
+        }
+      } catch (err) {
+        alertEl.textContent = 'Terjadi kesalahan sistem';
+        alertEl.style.display = 'block';
+      }
+    });
+
+    // Handle Logout
+    async function handleLogout() {
+      await fetch('/api/admin/logout', { method: 'POST' });
+      checkAuth();
+    }
+
+    // Load Admin Products
+    async function loadAdminProducts() {
+      const container = document.getElementById('admin-products-list');
+      const statsEl = document.getElementById('stats-text');
+
+      try {
+        const res = await fetch('/api/admin/products');
+        if (res.status === 401) {
+          checkAuth();
+          return;
+        }
+        const products = await res.json();
+
+        const activeCount = products.filter(p => p.is_active).length;
+        statsEl.textContent = `${products.length} Total produk • ${activeCount} Aktif • ${products.length - activeCount} Nonaktif`;
+
+        if (products.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <p>Belum ada produk. Klik tombol "+ Tambah Produk" di atas.</p>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = products.map(product => `
+          <div class="admin-product-card">
+            <div class="admin-product-header">
+              <div>
+                <h3 class="admin-product-title">${escapeHtml(product.title)}</h3>
+                <a href="${escapeHtml(product.affiliate_url)}" target="_blank" class="admin-product-url">${escapeHtml(product.affiliate_url)} ↗</a>
+              </div>
+              <span class="badge ${product.is_active ? 'badge-active' : 'badge-inactive'}">
+                ${product.is_active ? 'Aktif' : 'Nonaktif'}
+              </span>
+            </div>
+
+            <div class="admin-product-meta">
+              <span class="badge badge-order">Urutan: ${product.sort_order}</span>
+              
+              <div class="action-buttons">
+                <button onclick="toggleActive('${product.id}', ${!product.is_active})" class="btn btn-secondary btn-sm">
+                  ${product.is_active ? 'Nonaktifkan' : 'Aktifkan'}
+                </button>
+                <button onclick="editProduct('${product.id}')" class="btn btn-secondary btn-sm">
+                  Edit
+                </button>
+                <button onclick="openDeleteModal('${product.id}', '${escapeHtml(product.title).replace(/'/g, "\\'")}')" class="btn btn-danger btn-sm">
+                  Hapus
+                </button>
+              </div>
+            </div>
+          </div>
+        `).join('');
+
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = '<div class="alert alert-danger">Gagal memuat produk.</div>';
+      }
+    }
+
+    // Toggle Active Status
+    async function toggleActive(id, newStatus) {
+      try {
+        await fetch(`/api/admin/products/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ is_active: newStatus })
+        });
+        loadAdminProducts();
+      } catch (err) {
+        alert('Gagal mengubah status');
+      }
+    }
+
+    // Modal Operations (Add / Edit)
+    function openProductModal(product = null) {
+      const modalAlert = document.getElementById('modal-alert');
+      modalAlert.style.display = 'none';
+
+      if (product) {
+        document.getElementById('modal-form-title').textContent = 'Edit Produk';
+        document.getElementById('form-product-id').value = product.id;
+        document.getElementById('form-title').value = product.title;
+        document.getElementById('form-url').value = product.affiliate_url;
+        document.getElementById('form-sort').value = product.sort_order;
+        document.getElementById('form-active').checked = product.is_active;
+      } else {
+        document.getElementById('modal-form-title').textContent = 'Tambah Produk Baru';
+        document.getElementById('form-product-id').value = '';
+        document.getElementById('product-form').reset();
+        document.getElementById('form-sort').value = 0;
+        document.getElementById('form-active').checked = true;
+      }
+
+      document.getElementById('product-modal').classList.add('active');
+    }
+
+    function closeProductModal() {
+      document.getElementById('product-modal').classList.remove('active');
+    }
+
+    // Edit Product Click Handler
+    async function editProduct(id) {
+      try {
+        const res = await fetch('/api/admin/products');
+        const products = await res.json();
+        const p = products.find(item => item.id === id);
+        if (p) openProductModal(p);
+      } catch (err) {
+        alert('Gagal memuat data produk');
+      }
+    }
+
+    // Product Form Submit Handler
+    document.getElementById('product-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const modalAlert = document.getElementById('modal-alert');
+      modalAlert.style.display = 'none';
+
+      const id = document.getElementById('form-product-id').value;
+      const title = document.getElementById('form-title').value.trim();
+      const affiliate_url = document.getElementById('form-url').value.trim();
+      const sort_order = parseInt(document.getElementById('form-sort').value, 10) || 0;
+      const is_active = document.getElementById('form-active').checked;
+
+      const payload = { title, affiliate_url, sort_order, is_active };
+      const url = id ? `/api/admin/products/${id}` : '/api/admin/products';
+      const method = id ? 'PUT' : 'POST';
+
+      try {
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          closeProductModal();
+          loadAdminProducts();
+        } else {
+          modalAlert.textContent = data.error || 'Gagal menyimpan produk';
+          modalAlert.style.display = 'block';
+        }
+      } catch (err) {
+        modalAlert.textContent = 'Terjadi kesalahan server';
+        modalAlert.style.display = 'block';
+      }
+    });
+
+    // Delete Modal Handlers
+    function openDeleteModal(id, title) {
+      deletingProductId = id;
+      document.getElementById('delete-product-title').textContent = title;
+      document.getElementById('delete-modal').classList.add('active');
+    }
+
+    function closeDeleteModal() {
+      deletingProductId = null;
+      document.getElementById('delete-modal').classList.remove('active');
+    }
+
+    async function confirmDeleteProduct() {
+      if (!deletingProductId) return;
+
+      try {
+        const res = await fetch(`/api/admin/products/${deletingProductId}`, {
+          method: 'DELETE'
+        });
+        if (res.ok) {
+          closeDeleteModal();
+          loadAdminProducts();
+        } else {
+          alert('Gagal menghapus produk');
+        }
+      } catch (err) {
+        alert('Terjadi kesalahan server saat menghapus');
+      }
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // Init check
+    checkAuth();
+  </script>
+
+</body>
+</html>
