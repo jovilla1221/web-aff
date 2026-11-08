@@ -3,3 +3,10 @@ cloudflared
 .DS_Store
 .env
 cookies.txt
+.venv/
+venv/
+__pycache__/
+*.db-shm
+*.db-wal
+*.session
+*.log
